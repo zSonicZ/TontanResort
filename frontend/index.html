@@ -1,6 +1,19 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
+    <script>
+        // รับค่า environment variable จาก Vite build process
+        window.VITE_API_URL = '%VITE_API_URL%';
+        
+        // หาก window.VITE_API_URL ยังมีค่าเป็น '%VITE_API_URL%' 
+        // แสดงว่า Vite ไม่ได้แทนที่ด้วยค่าจริง
+        if (window.VITE_API_URL === '%VITE_API_URL%') {
+          // ใช้ค่า default สำหรับ development หรือหาก env ไม่ถูกตั้งค่า
+          window.VITE_API_URL = 'https://tontanresort-production.up.railway.app';
+        }
+        
+        console.log('API URL:', window.VITE_API_URL);
+      </script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Tontan Resort - ระบบบริหารจัดการ</title>
@@ -453,8 +466,13 @@
     }
     
     try {
+        // ใช้ URL จาก environment variable หรือ fallback ไปที่ localhost ถ้าไม่มี
+        // สำหรับ Vite การเข้าถึง env variables ต้องใช้ import.meta.env
+        // แต่เนื่องจากนี่เป็น inline script ใน HTML จึงต้องใช้วิธีอื่น
+        const apiUrl = window.VITE_API_URL || 'http://localhost:5000';
+        
         // เรียกใช้ API เพื่อตรวจสอบการเข้าสู่ระบบ
-        const response = await fetch('http://localhost:5000/api/auth/login', {
+        const response = await fetch(`${apiUrl}/api/auth/login`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -480,6 +498,7 @@
         alert('เกิดข้อผิดพลาดในการเข้าสู่ระบบ กรุณาลองใหม่อีกครั้ง');
     }
 }
+
         
         function logout() {
             // Hide dashboard view and show login
