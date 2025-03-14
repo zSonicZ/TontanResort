@@ -442,19 +442,44 @@
     </div>
     
     <script>
-        function login() {
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
+        async function login() {
+    const username = document.getElementById('username').value;
+    const password = document.getElementById('password').value;
+    
+    // ตรวจสอบว่าได้กรอกข้อมูลหรือไม่
+    if (!username || !password) {
+        alert('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน');
+        return;
+    }
+    
+    try {
+        // เรียกใช้ API เพื่อตรวจสอบการเข้าสู่ระบบ
+        const response = await fetch('http://localhost:5000/api/auth/login', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ username, password })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // เก็บ token ลงใน localStorage
+            localStorage.setItem('token', data.token);
             
-            // Simple validation (in real app would connect to backend)
-            if (username && password) {
-                // Hide login view and show dashboard
-                document.getElementById('login-view').style.display = 'none';
-                document.getElementById('dashboard-view').style.display = 'flex';
-            } else {
-                alert('กรุณากรอกชื่อผู้ใช้และรหัสผ่าน');
-            }
+            // นำผู้ใช้ไปยังหน้า dashboard
+            document.getElementById('login-view').style.display = 'none';
+            document.getElementById('dashboard-view').style.display = 'flex';
+        } else {
+            // แสดงข้อความผิดพลาด
+            alert(data.error || 'ชื่อผู้ใช้หรือรหัสผ่านไม่ถูกต้อง');
         }
+    } catch (error) {
+        console.error('Login error:', error);
+        alert('เกิดข้อผิดพลาดในการเข้าสู่ระบบ กรุณาลองใหม่อีกครั้ง');
+    }
+}
         
         function logout() {
             // Hide dashboard view and show login
