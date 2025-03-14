@@ -4,18 +4,21 @@ import {
   Box, Paper, Typography, Grid, Card, CardContent, CardActions, 
   Button, IconButton, Chip, Badge, Dialog, DialogTitle, DialogContent, 
   DialogActions, TextField, FormControl, InputLabel, Select, MenuItem,
-  Tooltip, InputAdornment, Tabs, Tab, Divider, Switch, FormControlLabel
+  Tooltip, InputAdornment, Tabs, Tab, Divider, Switch, FormControlLabel,
+  Alert, Snackbar
 } from '@mui/material';
 import { 
   Search as SearchIcon,
   Edit as EditIcon,
   Add as AddIcon,
+  Save as SaveIcon,
   CheckCircle as CheckCircleIcon,
   CleaningServices as CleaningIcon,
   DoNotDisturb as DoNotDisturbIcon,
   CheckCircleOutline as AvailableIcon,
   EventBusy as OccupiedIcon,
-  Event as ReservedIcon
+  Event as ReservedIcon,
+  Delete as DeleteIcon
 } from '@mui/icons-material';
 
 const Rooms = () => {
@@ -28,10 +31,24 @@ const Rooms = () => {
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [viewMode, setViewMode] = useState('grid');
   const [currentTab, setCurrentTab] = useState(0);
+  const [notificationOpen, setNotificationOpen] = useState(false);
+  const [notificationMessage, setNotificationMessage] = useState('');
+  const [notificationType, setNotificationType] = useState('success');
+  const [isEditMode, setIsEditMode] = useState(false);
+  const [formData, setFormData] = useState({
+    number: '',
+    floor: 1,
+    type: 'Deluxe',
+    price: 2500,
+    capacity: 2,
+    status: 'available',
+    cleaningStatus: 'clean',
+    description: '',
+    notes: ''
+  });
 
   useEffect(() => {
     // สร้างข้อมูลจำลองสำหรับห้องพัก
-    // ในแอปพลิเคชันจริง จะดึงข้อมูลจาก API
     const roomTypes = [
       { 
         type: 'Deluxe', 
@@ -65,7 +82,6 @@ const Rooms = () => {
     
     const statuses = ['available', 'occupied', 'reserved', 'maintenance', 'cleaning'];
     const cleaningStatuses = ['clean', 'dirty', 'cleaning'];
-    
     const floors = [1, 2, 3, 4];
     
     // สร้างห้องพักจำลอง
@@ -113,14 +129,46 @@ const Rooms = () => {
     setRooms(mockRooms);
   }, []);
 
+  useEffect(() => {
+    // เมื่อเลือกห้อง ให้กำหนดค่าใน formData
+    if (selectedRoom) {
+      setFormData({
+        number: selectedRoom.number,
+        floor: selectedRoom.floor,
+        type: selectedRoom.type,
+        price: selectedRoom.price,
+        capacity: selectedRoom.capacity,
+        status: selectedRoom.status,
+        cleaningStatus: selectedRoom.cleaningStatus,
+        description: selectedRoom.description,
+        notes: selectedRoom.notes
+      });
+    } else {
+      // รีเซ็ตฟอร์มเมื่อสร้างห้องใหม่
+      setFormData({
+        number: '',
+        floor: 1,
+        type: 'Deluxe',
+        price: 2500,
+        capacity: 2,
+        status: 'available',
+        cleaningStatus: 'clean',
+        description: '',
+        notes: ''
+      });
+    }
+  }, [selectedRoom]);
+
   const openRoomModal = (room = null) => {
     setSelectedRoom(room);
+    setIsEditMode(false);
     setOpenModal(true);
   };
 
   const closeRoomModal = () => {
     setOpenModal(false);
     setSelectedRoom(null);
+    setIsEditMode(false);
   };
 
   const handleSearchChange = (event) => {
@@ -141,6 +189,118 @@ const Rooms = () => {
 
   const handleTabChange = (event, newValue) => {
     setCurrentTab(newValue);
+  };
+
+  const handleFormDataChange = (event) => {
+    const { name, value } = event.target;
+    setFormData({
+      ...formData,
+      [name]: name === 'price' || name === 'capacity' || name === 'number' ? 
+              Number(value) : value
+    });
+  };
+
+  const handleSaveRoom = () => {
+    // ตรวจสอบข้อมูลที่จำเป็น
+    if (!formData.number || !formData.type || !formData.price) {
+      showNotification('กรุณากรอกข้อมูลที่จำเป็นให้ครบถ้วน', 'error');
+      return;
+    }
+
+    if (selectedRoom) {
+      // อัปเดตห้องที่มีอยู่
+      const updatedRooms = rooms.map(room => 
+        room.id === selectedRoom.id ? 
+        {
+          ...room,
+          number: formData.number,
+          floor: formData.floor,
+          type: formData.type,
+          price: formData.price,
+          capacity: formData.capacity,
+          status: formData.status,
+          cleaningStatus: formData.cleaningStatus,
+          description: formData.description,
+          notes: formData.notes
+        } : room
+      );
+      setRooms(updatedRooms);
+      showNotification('อัปเดตข้อมูลห้องพักเรียบร้อยแล้ว', 'success');
+    } else {
+      // เพิ่มห้องใหม่
+      const newRoom = {
+        id: formData.number.toString(),
+        number: formData.number,
+        floor: formData.floor,
+        type: formData.type,
+        price: formData.price,
+        capacity: formData.capacity,
+        status: formData.status,
+        cleaningStatus: formData.cleaningStatus,
+        description: formData.description,
+        notes: formData.notes,
+        lastCleaned: new Date(),
+        amenities: ['เครื่องปรับอากาศ', 'Wi-Fi', 'ตู้เย็น', 'เครื่องทำน้ำอุ่น', 'โทรทัศน์'],
+        image: '/api/placeholder/300/200'
+      };
+      
+      // ตรวจสอบว่ามีห้องซ้ำหรือไม่
+      if (rooms.some(room => room.number === formData.number)) {
+        showNotification('หมายเลขห้องนี้มีอยู่ในระบบแล้ว', 'error');
+        return;
+      }
+      
+      setRooms([...rooms, newRoom]);
+      showNotification('เพิ่มห้องพักใหม่เรียบร้อยแล้ว', 'success');
+    }
+    
+    closeRoomModal();
+  };
+
+  const handleDeleteRoom = () => {
+    if (selectedRoom) {
+      if (selectedRoom.status === 'occupied') {
+        showNotification('ไม่สามารถลบห้องที่มีลูกค้าพักอยู่ได้', 'error');
+        return;
+      }
+      
+      const updatedRooms = rooms.filter(room => room.id !== selectedRoom.id);
+      setRooms(updatedRooms);
+      showNotification('ลบห้องพักเรียบร้อยแล้ว', 'success');
+      closeRoomModal();
+    }
+  };
+
+  const handleEditRoom = () => {
+    setIsEditMode(true);
+  };
+
+  const handleStatusChange = (roomId, newStatus) => {
+    const updatedRooms = rooms.map(room => 
+      room.id === roomId ? { ...room, status: newStatus } : room
+    );
+    setRooms(updatedRooms);
+    showNotification(`เปลี่ยนสถานะห้อง ${roomId} เป็น ${getStatusChipProps(newStatus).label} เรียบร้อยแล้ว`, 'success');
+  };
+
+  const handleCleaningStatusChange = (roomId, newStatus) => {
+    const updatedRooms = rooms.map(room => 
+      room.id === roomId ? { ...room, cleaningStatus: newStatus } : room
+    );
+    setRooms(updatedRooms);
+    const statusText = newStatus === 'clean' ? 'สะอาด' : 
+                      newStatus === 'dirty' ? 'รอทำความสะอาด' : 'กำลังทำความสะอาด';
+    showNotification(`เปลี่ยนสถานะความสะอาดห้อง ${roomId} เป็น ${statusText} เรียบร้อยแล้ว`, 'success');
+  };
+
+  const showNotification = (message, type = 'success') => {
+    setNotificationMessage(message);
+    setNotificationType(type);
+    setNotificationOpen(true);
+  };
+
+  const handleCloseNotification = () => {
+    setNotificationOpen(false);
   };
 
   const getStatusChipProps = (status) => {
@@ -436,7 +596,10 @@ const Rooms = () => {
                   <Button size="small" onClick={() => openRoomModal(room)}>
                     ดูรายละเอียด
                   </Button>
-                  <Button size="small" color="primary">
+                  <Button 
+                    size="small" 
+                    color={room.status === 'available' ? 'success' : 'primary'}
+                  >
                     {room.status === 'available' ? 'เช็คอิน' : 'จัดการ'}
                   </Button>
                 </CardActions>
@@ -458,10 +621,14 @@ const Rooms = () => {
       {/* Room Modal */}
       <Dialog open={openModal} onClose={closeRoomModal} maxWidth="md" fullWidth>
         <DialogTitle>
-          {selectedRoom ? `รายละเอียดห้อง ${selectedRoom.number}` : 'เพิ่มห้องพักใหม่'}
+          {selectedRoom ? (
+            isEditMode ? `แก้ไขข้อมูลห้อง ${selectedRoom.number}` : `รายละเอียดห้อง ${selectedRoom.number}`
+          ) : (
+            'เพิ่มห้องพักใหม่'
+          )}
         </DialogTitle>
         <DialogContent dividers>
-          {selectedRoom ? (
+          {selectedRoom && !isEditMode ? (
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
                 <img 
@@ -481,6 +648,80 @@ const Rooms = () => {
                       selectedRoom.cleaningStatus === 'dirty' ? 'รอทำความสะอาด' : 'กำลังทำความสะอาด'
                     }
                   </Typography>
+                </Box>
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    จัดการสถานะ
+                  </Typography>
+                  <Grid container spacing={1}>
+                    {selectedRoom.status !== 'available' && (
+                      <Grid item>
+                        <Button 
+                          size="small" 
+                          variant="outlined" 
+                          color="warning"
+                          onClick={() => handleStatusChange(selectedRoom.id, 'maintenance')}
+                        >
+                          ซ่อมบำรุง
+                        </Button>
+                      </Grid>
+                    )}
+                    {selectedRoom.status !== 'cleaning' && (
+                      <Grid item>
+                        <Button 
+                          size="small" 
+                          variant="outlined" 
+                          color="info"
+                          onClick={() => handleStatusChange(selectedRoom.id, 'cleaning')}
+                        >
+                          ทำความสะอาด
+                        </Button>
+                      </Grid>
+                    )}
+                  </Grid>
+                </Box>
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    จัดการความสะอาด
+                  </Typography>
+                  <Grid container spacing={1}>
+                    {selectedRoom.cleaningStatus !== 'clean' && (
+                      <Grid item>
+                        <Button 
+                          size="small" 
+                          variant="outlined" 
+                          color="success"
+                          onClick={() => handleCleaningStatusChange(selectedRoom.id, 'clean')}
+                        >
+                          สะอาด
+                        </Button>
+                      </Grid>
+                    )}
+                    {selectedRoom.cleaningStatus !== 'dirty' && (
+                      <Grid item>
+                        <Button 
+                          size="small" 
+                          variant="outlined" 
+                          color="error"
+                          onClick={() => handleCleaningStatusChange(selectedRoom.id, 'dirty')}
+                        >
+                          รอทำความสะอาด
+                        </Button>
+                      </Grid>
+                    )}
+                    {selectedRoom.cleaningStatus !== 'cleaning' && (
+                      <Grid item>
+                        <Button 
+                          size="small" 
+                          variant="outlined" 
+                          color="info"
+                          onClick={() => handleCleaningStatusChange(selectedRoom.id, 'cleaning')}
+                        >
+                          กำลังทำความสะอาด
+                        </Button>
+                      </Grid>
+                    )}
+                  </Grid>
                 </Box>
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -526,17 +767,14 @@ const Rooms = () => {
                     <Typography variant="body2">เช็คเอาท์: {selectedRoom.checkOut.toLocaleDateString('th-TH')}</Typography>
                   </Box>
                 )}
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                  fullWidth
-                  label="หมายเหตุ"
-                  multiline
-                  rows={3}
-                  value={selectedRoom.notes}
-                  variant="outlined"
-                  margin="normal"
-                />
+                <Box sx={{ mt: 2 }}>
+                  <Typography variant="subtitle2" gutterBottom>
+                    หมายเหตุ
+                  </Typography>
+                  <Typography variant="body2" color="text.secondary">
+                    {selectedRoom.notes || 'ไม่มีหมายเหตุ'}
+                  </Typography>
+                </Box>
               </Grid>
             </Grid>
           ) : (
@@ -547,12 +785,24 @@ const Rooms = () => {
                   label="หมายเลขห้อง"
                   variant="outlined"
                   margin="normal"
+                  name="number"
+                  value={formData.number}
+                  onChange={handleFormDataChange}
+                  type="number"
+                  required
+                  disabled={selectedRoom && !isEditMode}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <FormControl fullWidth variant="outlined" margin="normal">
                   <InputLabel>ประเภทห้อง</InputLabel>
-                  <Select label="ประเภทห้อง">
+                  <Select 
+                    label="ประเภทห้อง"
+                    name="type"
+                    value={formData.type}
+                    onChange={handleFormDataChange}
+                    disabled={selectedRoom && !isEditMode}
+                  >
                     <MenuItem value="Deluxe">Deluxe</MenuItem>
                     <MenuItem value="Superior">Superior</MenuItem>
                     <MenuItem value="Suite">Suite</MenuItem>
@@ -563,8 +813,14 @@ const Rooms = () => {
               <Grid item xs={12} sm={6}>
                 <FormControl fullWidth variant="outlined" margin="normal">
                   <InputLabel>ชั้น</InputLabel>
-                  <Select label="ชั้น">
-                    {floors.map(floor => (
+                  <Select 
+                    label="ชั้น"
+                    name="floor"
+                    value={formData.floor}
+                    onChange={handleFormDataChange}
+                    disabled={selectedRoom && !isEditMode}
+                  >
+                    {[1, 2, 3, 4].map(floor => (
                       <MenuItem key={floor} value={floor}>{floor}</MenuItem>
                     ))}
                   </Select>
@@ -577,6 +833,13 @@ const Rooms = () => {
                   type="number"
                   variant="outlined"
                   margin="normal"
+                  name="price"
+                  value={formData.price}
+                  onChange={handleFormDataChange}
+                  disabled={selectedRoom && !isEditMode}
+                  InputProps={{
+                    startAdornment: <InputAdornment position="start">฿</InputAdornment>,
+                  }}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
@@ -586,14 +849,31 @@ const Rooms = () => {
                   type="number"
                   variant="outlined"
                   margin="normal"
+                  name="capacity"
+                  value={formData.capacity}
+                  onChange={handleFormDataChange}
+                  disabled={selectedRoom && !isEditMode}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <FormControl fullWidth variant="outlined" margin="normal">
                   <InputLabel>สถานะห้อง</InputLabel>
-                  <Select label="สถานะห้อง">
+                  <Select 
+                    label="สถานะห้อง"
+                    name="status"
+                    value={formData.status}
+                    onChange={handleFormDataChange}
+                    disabled={selectedRoom && !isEditMode}
+                  >
                     <MenuItem value="available">ว่าง</MenuItem>
                     <MenuItem value="maintenance">ซ่อมบำรุง</MenuItem>
+                    <MenuItem value="cleaning">กำลังทำความสะอาด</MenuItem>
+                    {selectedRoom && (
+                      <>
+                        <MenuItem value="occupied">มีผู้เข้าพัก</MenuItem>
+                        <MenuItem value="reserved">จองแล้ว</MenuItem>
+                      </>
+                    )}
                   </Select>
                 </FormControl>
               </Grid>
@@ -605,26 +885,101 @@ const Rooms = () => {
                   rows={3}
                   variant="outlined"
                   margin="normal"
+                  name="description"
+                  value={formData.description}
+                  onChange={handleFormDataChange}
+                  disabled={selectedRoom && !isEditMode}
+                />
+              </Grid>
+              <Grid item xs={12}>
+                <TextField
+                  fullWidth
+                  label="หมายเหตุ"
+                  multiline
+                  rows={2}
+                  variant="outlined"
+                  margin="normal"
+                  name="notes"
+                  value={formData.notes}
+                  onChange={handleFormDataChange}
                 />
               </Grid>
             </Grid>
           )}
         </DialogContent>
         <DialogActions>
-          <Button onClick={closeRoomModal} color="inherit">
-            ยกเลิก
-          </Button>
           {selectedRoom ? (
-            <Button variant="contained" color="primary">
-              บันทึกการเปลี่ยนแปลง
-            </Button>
+            isEditMode ? (
+              <>
+                <Button onClick={closeRoomModal} color="inherit">
+                  ยกเลิก
+                </Button>
+                <Button 
+                  variant="contained" 
+                  color="primary" 
+                  startIcon={<SaveIcon />}
+                  onClick={handleSaveRoom}
+                >
+                  บันทึกการเปลี่ยนแปลง
+                </Button>
+              </>
+            ) : (
+              <>
+                <Button 
+                  color="error" 
+                  onClick={handleDeleteRoom}
+                  startIcon={<DeleteIcon />}
+                  disabled={selectedRoom?.status === 'occupied'}
+                >
+                  ลบห้อง
+                </Button>
+                <Box sx={{ flex: '1 1 auto' }} />
+                <Button onClick={closeRoomModal} color="inherit">
+                  ปิด
+                </Button>
+                <Button 
+                  variant="contained" 
+                  color="secondary" 
+                  startIcon={<EditIcon />}
+                  onClick={handleEditRoom}
+                >
+                  แก้ไข
+                </Button>
+              </>
+            )
           ) : (
-            <Button variant="contained" color="primary">
-              เพิ่มห้องพัก
-            </Button>
+            <>
+              <Button onClick={closeRoomModal} color="inherit">
+                ยกเลิก
+              </Button>
+              <Button 
+                variant="contained" 
+                color="primary"
+                startIcon={<AddIcon />}
+                onClick={handleSaveRoom}
+              >
+                เพิ่มห้องพัก
+              </Button>
+            </>
           )}
         </DialogActions>
       </Dialog>
+
+      {/* Notifications */}
+      <Snackbar
+        open={notificationOpen}
+        autoHideDuration={6000}
+        onClose={handleCloseNotification}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      >
+        <Alert
+          onClose={handleCloseNotification}
+          severity={notificationType}
+          sx={{ width: '100%' }}
+        >
+          {notificationMessage}
+        </Alert>
+      </Snackbar>
     </Box>
   );
 };

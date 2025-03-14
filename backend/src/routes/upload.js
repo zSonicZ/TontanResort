@@ -1,0 +1,68 @@
+const express = require('express');
+const router = express.Router();
+const { protect, authorize } = require('../middlewares/auth');
+const { uploadProfile, uploadRoom, uploadInventory } = require('../config/cloudinary');
+const { 
+  uploadProfileImage, 
+  uploadRoomImage, 
+  uploadInventoryImage, 
+  deleteImage 
+} = require('../controllers/uploadController');
+
+// สร้าง custom middleware สำหรับจัดการ error ของ multer
+const handleMulterError = (err, req, res, next) => {
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(400).json({
+      success: false,
+      error: 'ขนาดไฟล์เกินกำหนด'
+    });
+  }
+  
+  if (err.code === 'LIMIT_UNEXPECTED_FILE') {
+    return res.status(400).json({
+      success: false,
+      error: 'ไม่รองรับประเภทไฟล์นี้'
+    });
+  }
+  
+  return next(err);
+};
+
+// อัปโหลดรูปภาพโปรไฟล์
+router.post(
+  '/profile',
+  protect,
+  handleMulterError,
+  uploadProfile.single('image'),
+  uploadProfileImage
+);
+
+// อัปโหลดรูปภาพห้องพัก
+router.post(
+  '/room/:id',
+  protect,
+  authorize('admin', 'manager'),
+  handleMulterError,
+  uploadRoom.single('image'),
+  uploadRoomImage
+);
+
+// อัปโหลดรูปภาพสินค้า
+router.post(
+  '/inventory/:id',
+  protect,
+  authorize('admin', 'staff'),
+  handleMulterError,
+  uploadInventory.single('image'),
+  uploadInventoryImage
+);
+
+// ลบรูปภาพ
+router.delete(
+  '/:folder/:publicId',
+  protect,
+  authorize('admin'),
+  deleteImage
+);
+
+module.exports = router;
