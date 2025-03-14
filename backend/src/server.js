@@ -1,94 +1,52 @@
 const express = require('express');
 const dotenv = require('dotenv');
+const cors = require('cors');
+const helmet = require('helmet');
+const morgan = require('morgan');
+const connectDB = require('./config/database');
+const errorHandler = require('./middlewares/errorHandler');
 
 // Load environment variables
 dotenv.config();
 
+// Connect to database
+connectDB();
+
 const app = express();
 
-// Basic middleware
+// Middleware
 app.use(express.json());
+app.use(cors({
+  origin: process.env.CORS_ORIGIN || '*'
+}));
+app.use(helmet());
+app.use(morgan('dev'));
+
+// Routes
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/users', require('./routes/users'));
+app.use('/api/rooms', require('./routes/rooms'));
+app.use('/api/bookings', require('./routes/bookings')); 
+app.use('/api/inventory', require('./routes/inventory'));
+app.use('/api/upload', require('./routes/upload'));
 
 // Welcome route
 app.get('/', (req, res) => {
-  res.json({ message: 'Welcome to Tontan Resort API - Diagnostic Mode' });
+  res.json({ message: 'Welcome to Tontan Resort API' });
 });
 
-// Try to load routes individually to identify the problematic one
-try {
-  console.log('Testing auth route...');
-  const authRouter = require('./routes/auth');
-  app.use('/api/auth', authRouter);
-  console.log('✓ Auth route loaded successfully');
-} catch (error) {
-  console.error('✗ Error loading auth route:', error.message);
-}
-
-try {
-  console.log('Testing users route...');
-  const usersRouter = require('./routes/users');
-  app.use('/api/users', usersRouter);
-  console.log('✓ Users route loaded successfully');
-} catch (error) {
-  console.error('✗ Error loading users route:', error.message);
-}
-
-try {
-  console.log('Testing rooms route...');
-  const roomsRouter = require('./routes/rooms');
-  app.use('/api/rooms', roomsRouter);
-  console.log('✓ Rooms route loaded successfully');
-} catch (error) {
-  console.error('✗ Error loading rooms route:', error.message);
-}
-
-try {
-  console.log('Testing bookings route...');
-  const bookingsRouter = require('./routes/bookings');
-  app.use('/api/bookings', bookingsRouter);
-  console.log('✓ Bookings route loaded successfully');
-} catch (error) {
-  console.error('✗ Error loading bookings route:', error.message);
-}
-
-try {
-  console.log('Testing inventory route...');
-  const inventoryRouter = require('./routes/inventory');
-  app.use('/api/inventory', inventoryRouter);
-  console.log('✓ Inventory route loaded successfully');
-} catch (error) {
-  console.error('✗ Error loading inventory route:', error.message);
-}
-
-try {
-  console.log('Testing upload route...');
-  const uploadRouter = require('./routes/upload');
-  app.use('/api/upload', uploadRouter);
-  console.log('✓ Upload route loaded successfully');
-} catch (error) {
-  console.error('✗ Error loading upload route:', error.message);
-}
-
-try {
-  console.log('Testing accounting route...');
-  const accountingRouter = require('./routes/accounting');
-  app.use('/api/accounting', accountingRouter);
-  console.log('✓ Accounting route loaded successfully');
-} catch (error) {
-  console.error('✗ Error loading accounting route:', error.message);
-}
-
-try {
-  console.log('Testing reports route...');
-  const reportsRouter = require('./routes/reports');
-  app.use('/api/reports', reportsRouter);
-  console.log('✓ Reports route loaded successfully');
-} catch (error) {
-  console.error('✗ Error loading reports route:', error.message);
-}
+// Error handler
+app.use(errorHandler);
 
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(`Diagnostic server running on port ${PORT}`);
+  console.log(`Server running in ${process.env.NODE_ENV} mode on port ${PORT}`);
+});
+
+// Handle unhandled promise rejections
+process.on('unhandledRejection', (err, promise) => {
+  console.log(`Error: ${err.message}`);
+  // Close server & exit process
+  process.exit(1);
 });

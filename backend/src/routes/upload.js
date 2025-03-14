@@ -32,10 +32,6 @@ const handleMulterError = (err, req, res, next) => {
 router.post(
   '/profile',
   protect,
-  (err, req, res, next) => {
-    if (err) return handleMulterError(err, req, res, next);
-    next();
-  },
   uploadProfile.single('image'),
   uploadProfileImage
 );
@@ -45,10 +41,6 @@ router.post(
   '/room/:id',
   protect,
   authorize('admin', 'manager'),
-  (err, req, res, next) => {
-    if (err) return handleMulterError(err, req, res, next);
-    next();
-  },
   uploadRoom.single('image'),
   uploadRoomImage
 );
@@ -58,10 +50,6 @@ router.post(
   '/inventory/:id',
   protect,
   authorize('admin', 'staff'),
-  (err, req, res, next) => {
-    if (err) return handleMulterError(err, req, res, next);
-    next();
-  },
   uploadInventory.single('image'),
   uploadInventoryImage
 );
