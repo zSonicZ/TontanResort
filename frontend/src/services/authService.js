@@ -39,6 +39,14 @@ api.interceptors.response.use(
 );
 
 const AuthService = {
+  register: async (userData) => {
+    try {
+      const response = await api.post('/auth/register', userData);
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { error: 'เกิดข้อผิดพลาดในการลงทะเบียน' };
+    }
+  },
   // เข้าสู่ระบบ
   login: async (username, password) => {
     try {

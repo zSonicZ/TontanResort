@@ -41,6 +41,31 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  const register = async (userData) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await AuthService.register(userData);
+      toast.success('ลงทะเบียนสำเร็จแล้ว กรุณาเข้าสู่ระบบ');
+      
+      return { 
+        success: true, 
+        message: response.message || 'ลงทะเบียนสำเร็จแล้ว กรุณาเข้าสู่ระบบ' 
+      };
+    } catch (err) {
+      setError(err.error || 'เกิดข้อผิดพลาดในการลงทะเบียน');
+      toast.error(err.error || 'เกิดข้อผิดพลาดในการลงทะเบียน');
+      
+      return { 
+        success: false, 
+        error: err.error || 'เกิดข้อผิดพลาดในการลงทะเบียน' 
+      };
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // ฟังก์ชันเข้าสู่ระบบ
   const login = async (username, password) => {
     try {
@@ -165,6 +190,7 @@ export const AuthProvider = ({ children }) => {
         isAuthenticated,
         login,
         logout,
+        register,
         forgotPassword,
         resetPassword,
         changePassword

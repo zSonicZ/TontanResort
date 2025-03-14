@@ -21,6 +21,7 @@ import Dashboard from './pages/dashboard/Dashboard';
 import Login from './pages/auth/Login';
 import ForgotPassword from './pages/auth/ForgotPassword';
 import ResetPassword from './pages/auth/ResetPassword';
+import Register from './pages/auth/Register';
 
 // Property Management System (PMS)
 import Bookings from './pages/pms/Bookings';
@@ -117,6 +118,7 @@ function App() {
             {/* Route สำหรับหน้าที่ไม่ต้องเข้าสู่ระบบ */}
             <Route path="/auth" element={<AuthLayout />}>
               <Route path="login" element={<Login />} />
+              <Route path="register" element={<Register />} />
               <Route path="forgot-password" element={<ForgotPassword />} />
               <Route path="reset-password/:token" element={<ResetPassword />} />
             </Route>
