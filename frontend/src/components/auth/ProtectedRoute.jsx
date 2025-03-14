@@ -2,6 +2,7 @@
 import React from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
+import { CircularProgress, Box } from '@mui/material';
 
 const ProtectedRoute = ({ children, roles }) => {
   const { isAuthenticated, user, loading } = useAuth();
@@ -9,7 +10,11 @@ const ProtectedRoute = ({ children, roles }) => {
 
   // แสดง Loader ระหว่างที่ยังโหลดข้อมูลผู้ใช้
   if (loading) {
-    return <div>กำลังโหลด...</div>;
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
   }
 
   // ตรวจสอบว่าผู้ใช้ได้ล็อกอินหรือไม่

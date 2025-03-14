@@ -1,171 +1,178 @@
 // src/contexts/AuthContext.jsx
 import React, { createContext, useState, useEffect } from 'react';
-import axios from 'axios';
-import jwtDecode from 'jwt-decode';
+import { AuthService } from '../services';
+import { toast } from 'react-toastify';
 
 // สร้าง Context
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
-  const [token, setToken] = useState(localStorage.getItem('token') || null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // ตั้งค่า headers สำหรับการส่งคำขอ API
   useEffect(() => {
-    if (token) {
-      axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
+    // เช็คว่ามี token หรือไม่
+    if (AuthService.isAuthenticated()) {
+      loadUserData();
     } else {
-      delete axios.defaults.headers.common['Authorization'];
-    }
-  }, [token]);
-
-  // ตรวจสอบ token และโหลดข้อมูลผู้ใช้เมื่อเริ่มแอปพลิเคชัน
-  useEffect(() => {
-    const initAuth = async () => {
-      if (token) {
-        try {
-          // ตรวจสอบว่า token หมดอายุหรือไม่
-          const decodedToken = jwtDecode(token);
-          const currentTime = Date.now() / 1000;
-
-          if (decodedToken.exp < currentTime) {
-            // Token หมดอายุ
-            logout();
-          } else {
-            // ดึงข้อมูลผู้ใช้จาก API
-            const response = await axios.get(`${import.meta.env.VITE_API_URL}/auth/me`);
-            setUser(response.data.data);
-          }
-        } catch (err) {
-          console.error('Auth initialization error:', err);
-          logout();
-        }
-      }
       setLoading(false);
-    };
-
-    initAuth();
+    }
   }, []);
 
-  // ฟังก์ชันล็อกอิน
+  // ฟังก์ชันโหลดข้อมูลผู้ใช้
+  const loadUserData = async () => {
+    try {
+      setLoading(true);
+      const response = await AuthService.getCurrentUser();
+      setUser(response.data);
+      setIsAuthenticated(true);
+      setError(null);
+    } catch (err) {
+      console.error('Error loading user data:', err);
+      setUser(null);
+      setIsAuthenticated(false);
+      // หาก token ไม่ถูกต้องหรือหมดอายุ ให้ล้าง token ออก
+      AuthService.logout();
+      setError('Session expired. Please log in again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ฟังก์ชันเข้าสู่ระบบ
   const login = async (username, password) => {
     try {
       setLoading(true);
       setError(null);
       
-      const response = await axios.post(`${import.meta.env.VITE_API_URL}/auth/login`, { 
-        username, 
-        password 
-      });
+      const response = await AuthService.login(username, password);
       
-      const { token: newToken, user: userData } = response.data;
-      
-      // เก็บ token ลงใน localStorage
-      localStorage.setItem('token', newToken);
-      
-      // ตั้งค่า state
-      setToken(newToken);
-      setUser(userData);
-      setLoading(false);
-      
-      return { success: true };
+      if (response.token) {
+        setUser(response.user);
+        setIsAuthenticated(true);
+        toast.success('เข้าสู่ระบบสำเร็จ');
+        return { success: true };
+      } else {
+        throw new Error('No token received');
+      }
     } catch (err) {
+      setError(err.error || 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ');
+      toast.error(err.error || 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ');
+      return { 
+        success: false, 
+        error: err.error || 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ' 
+      };
+    } finally {
       setLoading(false);
-      setError(err.response?.data?.error || 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ');
-      return { success: false, error: err.response?.data?.error || 'เกิดข้อผิดพลาดในการเข้าสู่ระบบ' };
     }
   };
 
-  // ฟังก์ชันล็อกเอาท์
+  // ฟังก์ชันออกจากระบบ
   const logout = () => {
-    // ล้าง localStorage
-    localStorage.removeItem('token');
-    
-    // รีเซ็ต state
-    setToken(null);
+    AuthService.logout();
     setUser(null);
+    setIsAuthenticated(false);
     setError(null);
+    toast.info('ออกจากระบบแล้ว');
+  };
+
+  // ฟังก์ชันลืมรหัสผ่าน
+  const forgotPassword = async (email) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await AuthService.forgotPassword(email);
+      toast.success(response.message || 'ส่งอีเมลรีเซ็ตรหัสผ่านเรียบร้อยแล้ว');
+      
+      return { 
+        success: true, 
+        message: response.message 
+      };
+    } catch (err) {
+      setError(err.error || 'เกิดข้อผิดพลาดในการส่งอีเมลรีเซ็ตรหัสผ่าน');
+      toast.error(err.error || 'เกิดข้อผิดพลาดในการส่งอีเมลรีเซ็ตรหัสผ่าน');
+      
+      return { 
+        success: false, 
+        error: err.error || 'เกิดข้อผิดพลาดในการส่งอีเมลรีเซ็ตรหัสผ่าน' 
+      };
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // ฟังก์ชันรีเซ็ตรหัสผ่าน
+  const resetPassword = async (token, password) => {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const response = await AuthService.resetPassword(token, password);
+      toast.success(response.message || 'รีเซ็ตรหัสผ่านเรียบร้อยแล้ว');
+      
+      return { 
+        success: true, 
+        message: response.message 
+      };
+    } catch (err) {
+      setError(err.error || 'เกิดข้อผิดพลาดในการรีเซ็ตรหัสผ่าน');
+      toast.error(err.error || 'เกิดข้อผิดพลาดในการรีเซ็ตรหัสผ่าน');
+      
+      return { 
+        success: false, 
+        error: err.error || 'เกิดข้อผิดพลาดในการรีเซ็ตรหัสผ่าน' 
+      };
+    } finally {
+      setLoading(false);
+    }
   };
 
   // ฟังก์ชันเปลี่ยนรหัสผ่าน
   const changePassword = async (currentPassword, newPassword) => {
     try {
       setLoading(true);
+      setError(null);
       
-      const response = await axios.put(`${import.meta.env.VITE_API_URL}/auth/changepassword`, {
-        currentPassword,
-        newPassword
-      });
+      const response = await AuthService.changePassword(currentPassword, newPassword);
+      toast.success(response.message || 'เปลี่ยนรหัสผ่านเรียบร้อยแล้ว');
       
-      setLoading(false);
-      return { success: true, message: response.data.message };
+      return { 
+        success: true, 
+        message: response.message 
+      };
     } catch (err) {
-      setLoading(false);
+      setError(err.error || 'เกิดข้อผิดพลาดในการเปลี่ยนรหัสผ่าน');
+      toast.error(err.error || 'เกิดข้อผิดพลาดในการเปลี่ยนรหัสผ่าน');
+      
       return { 
         success: false, 
-        error: err.response?.data?.error || 'เกิดข้อผิดพลาดในการเปลี่ยนรหัสผ่าน' 
+        error: err.error || 'เกิดข้อผิดพลาดในการเปลี่ยนรหัสผ่าน' 
       };
+    } finally {
+      setLoading(false);
     }
   };
 
-  // ฟังก์ชันส่งอีเมลรีเซ็ตรหัสผ่าน
-  const forgotPassword = async (email) => {
-    try {
-      setLoading(true);
-      
-      const response = await axios.post(`${import.meta.env.VITE_API_URL}/auth/forgotpassword`, {
-        email
-      });
-      
-      setLoading(false);
-      return { success: true, message: response.data.message };
-    } catch (err) {
-      setLoading(false);
-      return { 
-        success: false, 
-        error: err.response?.data?.error || 'เกิดข้อผิดพลาดในการส่งอีเมลรีเซ็ตรหัสผ่าน' 
-      };
-    }
-  };
-
-  // ฟังก์ชันรีเซ็ตรหัสผ่าน
-  const resetPassword = async (resetToken, password) => {
-    try {
-      setLoading(true);
-      
-      const response = await axios.put(
-        `${import.meta.env.VITE_API_URL}/auth/resetpassword/${resetToken}`,
-        { password }
-      );
-      
-      setLoading(false);
-      return { success: true, message: response.data.message };
-    } catch (err) {
-      setLoading(false);
-      return { 
-        success: false, 
-        error: err.response?.data?.error || 'เกิดข้อผิดพลาดในการรีเซ็ตรหัสผ่าน' 
-      };
-    }
-  };
-
-  // ส่งค่า Context
-  const value = {
-    user,
-    token,
-    loading,
-    error,
-    login,
-    logout,
-    changePassword,
-    forgotPassword,
-    resetPassword,
-    isAuthenticated: !!token,
-  };
-
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        error,
+        isAuthenticated,
+        login,
+        logout,
+        forgotPassword,
+        resetPassword,
+        changePassword
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 };
 
 export default AuthProvider;

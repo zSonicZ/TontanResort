@@ -1,10 +1,17 @@
-import { StrictMode } from 'react'
-import { createRoot } from 'react-dom/client'
-import './index.css'
-import App from './App.jsx'
+// src/main.jsx
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import App from './App.jsx';
+import './index.css';
 
-createRoot(document.getElementById('root')).render(
-  <StrictMode>
+import '@fontsource/prompt/300.css'; // Light
+import '@fontsource/prompt/400.css'; // Regular
+import '@fontsource/prompt/500.css'; // Medium
+import '@fontsource/prompt/700.css'; // Bold
+import '@fontsource/kanit/400.css';
+
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <React.StrictMode>
     <App />
-  </StrictMode>,
-)
+  </React.StrictMode>,
+);
