@@ -9,7 +9,7 @@ const {
   deleteImage 
 } = require('../controllers/uploadController');
 
-// สร้าง custom middleware สำหรับจัดการ error ของ multer
+// Create custom middleware for handling multer error
 const handleMulterError = (err, req, res, next) => {
   if (err.code === 'LIMIT_FILE_SIZE') {
     return res.status(400).json({
@@ -28,36 +28,45 @@ const handleMulterError = (err, req, res, next) => {
   return next(err);
 };
 
-// อัปโหลดรูปภาพโปรไฟล์
+// Upload profile image
 router.post(
   '/profile',
   protect,
-  handleMulterError,
+  (err, req, res, next) => {
+    if (err) return handleMulterError(err, req, res, next);
+    next();
+  },
   uploadProfile.single('image'),
   uploadProfileImage
 );
 
-// อัปโหลดรูปภาพห้องพัก
+// Upload room image
 router.post(
   '/room/:id',
   protect,
   authorize('admin', 'manager'),
-  handleMulterError,
+  (err, req, res, next) => {
+    if (err) return handleMulterError(err, req, res, next);
+    next();
+  },
   uploadRoom.single('image'),
   uploadRoomImage
 );
 
-// อัปโหลดรูปภาพสินค้า
+// Upload inventory image
 router.post(
   '/inventory/:id',
   protect,
   authorize('admin', 'staff'),
-  handleMulterError,
+  (err, req, res, next) => {
+    if (err) return handleMulterError(err, req, res, next);
+    next();
+  },
   uploadInventory.single('image'),
   uploadInventoryImage
 );
 
-// ลบรูปภาพ
+// Delete image
 router.delete(
   '/:folder/:publicId',
   protect,
