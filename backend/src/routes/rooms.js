@@ -2,36 +2,49 @@ const express = require('express');
 const router = express.Router();
 const { protect, authorize } = require('../middlewares/auth');
 
-// These should point to your actual controller functions
-// If they don't exist yet, create placeholder functions
-const { 
-  getRooms,
-  getRoom,
-  createRoom,
-  updateRoom,
-  deleteRoom
-} = require('../controllers/roomController') || {
-  // Placeholder controller functions if yours aren't available
-  getRooms: (req, res) => res.status(200).json({ success: true, data: [] }),
-  getRoom: (req, res) => res.status(200).json({ success: true, data: {} }),
-  createRoom: (req, res) => res.status(201).json({ success: true, data: {} }),
-  updateRoom: (req, res) => res.status(200).json({ success: true, data: {} }),
-  deleteRoom: (req, res) => res.status(200).json({ success: true, data: {} })
-};
-
 // Get all rooms
-router.get('/', getRooms);
+router.get('/', (req, res) => {
+  res.status(200).json({ 
+    success: true, 
+    message: 'Get all rooms',
+    data: []
+  });
+});
 
 // Get single room
-router.get('/:id', getRoom);
+router.get('/:id', (req, res) => {
+  res.status(200).json({ 
+    success: true, 
+    message: `Get room with id ${req.params.id}`,
+    data: {}
+  });
+});
 
 // Create room
-router.post('/', protect, authorize('admin', 'manager'), createRoom);
+router.post('/', protect, authorize('admin', 'manager'), (req, res) => {
+  res.status(201).json({ 
+    success: true, 
+    message: 'Room created',
+    data: req.body
+  });
+});
 
 // Update room
-router.put('/:id', protect, authorize('admin', 'manager'), updateRoom);
+router.put('/:id', protect, authorize('admin', 'manager'), (req, res) => {
+  res.status(200).json({ 
+    success: true, 
+    message: `Room ${req.params.id} updated`,
+    data: { id: req.params.id, ...req.body }
+  });
+});
 
 // Delete room
-router.delete('/:id', protect, authorize('admin'), deleteRoom);
+router.delete('/:id', protect, authorize('admin'), (req, res) => {
+  res.status(200).json({ 
+    success: true, 
+    message: `Room ${req.params.id} deleted`,
+    data: {}
+  });
+});
 
 module.exports = router;

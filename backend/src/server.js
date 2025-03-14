@@ -26,7 +26,7 @@ app.use(morgan('dev'));
 app.use('/api/auth', require('./routes/auth'));
 app.use('/api/users', require('./routes/users'));
 app.use('/api/rooms', require('./routes/rooms'));
-app.use('/api/bookings', require('./routes/bookings')); 
+app.use('/api/bookings', require('./routes/bookings'));
 app.use('/api/inventory', require('./routes/inventory'));
 app.use('/api/upload', require('./routes/upload'));
 
